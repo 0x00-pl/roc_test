@@ -4,3 +4,4 @@ test
 *.hdf5
 recognition/
 result/
+features_400/
