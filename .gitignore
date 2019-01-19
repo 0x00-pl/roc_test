@@ -5,3 +5,4 @@ test
 recognition/
 result/
 features_400/
+*.npy
