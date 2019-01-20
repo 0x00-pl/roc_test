@@ -5,4 +5,7 @@ test
 recognition/
 result/
 features_400/
+pcm_features_no_vad/
+pcm_features/
+kanzhitongxue/
 *.npy
