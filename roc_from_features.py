@@ -86,7 +86,7 @@ def print_roc(roc_list, name='roc_cos'):
 
 def main():
     label_list = list(range(100))*4
-    label_feature_list = read_all(range(1, 401), label_list)
+    label_feature_list = read_all(range(1, 401), label_list, file_prefix='pcm_features_no_vad/')
 
     threshold_list = create_range(0, 1, 1000)
 
