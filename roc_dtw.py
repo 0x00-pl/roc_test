@@ -10,6 +10,7 @@ import python_speech_features
 from pydub import effects
 import matplotlib.pyplot as plt
 import webrtcvad
+import itertools
 
 
 def load_file(filename, file_format, frame_rate=16000):
@@ -43,8 +44,12 @@ def load_file(filename, file_format, frame_rate=16000):
     # ret_delta2 = ret_delta2 - np.mean(ret_delta2, axis=0)
     # ret_delta2 = ret_delta2 / np.var(ret_delta2, axis=0)
 
+    ret_acc = np.array(list(itertools.accumulate(ret, (lambda prev, cur: prev/2+cur))))
+    ret_acc = ret_acc - np.mean(ret_acc, axis=0)
+    ret_acc = ret_acc / np.var(ret_acc, axis=0)
+
     # # ret[ret <= 1e-30] = 1e-30
-    return np.concatenate((ret, ret_delta, ret_delta2), axis=1)
+    return np.concatenate((ret, ret_delta, ret_delta2, ret_acc), axis=1)
     # ret = np.add.accumulate(ret)
     # ret_delta = np.add.accumulate(ret_delta)
     # ret_delta2 = np.add.accumulate(ret_delta2)
