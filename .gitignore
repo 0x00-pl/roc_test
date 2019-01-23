@@ -7,5 +7,11 @@ result/
 features_400/
 pcm_features_no_vad/
 pcm_features/
+feature_soft_fft/
+pcm_features_soft_fft/
+feature_soft_fft_vad/
+feature_out/
 kanzhitongxue/
+kanzhitongxue_train/
+kanzhitongxue_test/
 *.npy
