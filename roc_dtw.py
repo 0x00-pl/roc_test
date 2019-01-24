@@ -106,7 +106,7 @@ def cal_distance_multiprocessing_step(args):
 
 def cal_distance_multiprocessing(label_feature_list):
     args_list = []
-    for a in range(30):
+    for a in range(len(label_feature_list)):
         for b in range(a, len(label_feature_list)):
             a_label, a_feature = label_feature_list[a]
             b_label, b_feature = label_feature_list[b]
@@ -154,7 +154,7 @@ def main():
         distance_label_list = np.load(distance_type + '_distance_label_list.npy')
     else:
         pos_features_name = read_all('kanzhitongxue/pos')
-        neg_features_name = read_all('kanzhitongxue/quanzidong')
+        neg_features_name = read_all('kanzhitongxue/other_text')
         label_feature_list = [([1, name], fa) for fa, name in pos_features_name] + [([0, name], fa) for fa, name in neg_features_name]
         distance_label_list = cal_distance_multiprocessing(label_feature_list)
         np.save(distance_type + '_distance_label_list.npy', distance_label_list)
