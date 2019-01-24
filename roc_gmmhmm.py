@@ -74,7 +74,7 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
     GMMHMM_Models = GMMHMM_Models or {}
     for label in dataset.keys():
         if GMMHMM_Models.get(label) == None:
-            model = hmm.GaussianHMM(n_components=8, n_iter=20)
+            model = hmm.GaussianHMM(n_components=16, n_iter=20)
             model.startprob_ = [1] + [0] * (model.n_components - 1)
             model.transmat_ = [
                 [0.0] * i + [0.5, 0.5] + [0] * (model.n_components - i - 2)
