@@ -23,27 +23,25 @@ def load_file(filename, file_format, frame_rate=16000):
     sound = effects.normalize(sound)
     signal = np.array(sound.get_array_of_samples())
 
-
     vader = webrtcvad.Vad()
     vader.set_mode(1)
-    frames = python_speech_features.sigproc.framesig(signal, 320, 160)
+    frames = python_speech_features.sigproc.framesig(signal, 160, 160)
     frames = np.array([i for i in frames if vader.is_speech(i.astype('int16').tobytes(), 16000)])
     signal = frames.flatten()
 
-
-    ret = python_speech_features.mfcc(signal, numcep=13, nfilt=26, winlen=0.02, winstep=0.02, lowfreq=100,
+    ret = python_speech_features.mfcc(signal, numcep=13, nfilt=26, winlen=0.025, winstep=0.01, lowfreq=100,
                                       winfunc=lambda x: np.hamming(x))
 
     # ret = ret - np.mean(ret.flatten())
     # ret = ret / np.var(ret.flatten())
+    # ret = ret - np.mean(ret, axis=0)
+    # ret = ret / np.var(ret, axis=0)
+
     ret_delta = python_speech_features.delta(ret, 1)
     ret_delta2 = python_speech_features.delta(ret_delta, 1)
 
     # ret = ret - np.mean(ret, axis=1)[:, np.newaxis]
     # ret = ret / np.var(ret, axis=1)[:, np.newaxis]
-
-
-
     # ret_acc = np.array(list(itertools.accumulate(ret, (lambda prev, cur: prev / 2 + cur))))
     # ret_acc = ret_acc - np.mean(ret_acc, axis=0)
     # ret_acc = ret_acc / np.var(ret_acc, axis=0)
@@ -74,7 +72,11 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
     GMMHMM_Models = GMMHMM_Models or {}
     for label in dataset.keys():
         if GMMHMM_Models.get(label) == None:
-            model = hmm.GaussianHMM(n_components=16, n_iter=20)
+            model = hmm.GaussianHMM(
+                n_components=16, n_iter=1000, covariance_type='diag',
+                params='tmc', init_params='mc',
+                verbose=True
+            )
             model.startprob_ = [1] + [0] * (model.n_components - 1)
             model.transmat_ = [
                 [0.0] * i + [0.5, 0.5] + [0] * (model.n_components - i - 2)
@@ -95,11 +97,11 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
 
 def main():
     trainDataSet = {
-        0: read_all('kanzhitongxue_train/other_text'),
+        0: read_all('kanzhitongxue_train/u8k'),
         1: read_all('kanzhitongxue_train/pos')
     }
     testDataSet = {
-        0: read_all('kanzhitongxue_test/other_text'),
+        0: read_all('kanzhitongxue_test/u8k'),
         1: read_all('kanzhitongxue_test/pos')
     }
 
@@ -135,7 +137,7 @@ def main():
             if score_0 > score_1:
                 trueneg = trueneg + 1
 
-        false_score_0_list,false_score_1_list = np.array(false_score_0_list), np.array(false_score_1_list)
+        false_score_0_list, false_score_1_list = np.array(false_score_0_list), np.array(false_score_1_list)
         true_score_0_list, true_score_1_list = np.array(true_score_0_list), np.array(true_score_1_list)
 
         false_list = np.array([false_score_0_list, false_score_1_list]).transpose()
@@ -145,20 +147,26 @@ def main():
         false_list = pca.transform(false_list)
         true_list = pca.transform(true_list)
 
-        pyplot.figure()
-        pyplot.scatter(false_list[:,0], false_list[:,1], marker='x', s=1)
-        pyplot.scatter(true_list[:,0], true_list[:,1], marker='o', s=1)
-        pyplot.show()
-        pyplot.figure()
-        pyplot.scatter(false_score_0_list, false_score_1_list, marker='x', s=1)
-        pyplot.scatter(true_score_0_list, true_score_1_list, marker='o', s=1)
-        # for x,y,s in zip(false_score_0_list, false_score_1_list, np.array(testDataSet[0])[:, 1]):
-        #     pyplot.text(x,y,s)
-        pyplot.show()
         total_len = len(testDataSet[0]) + len(testDataSet[1])
         print('total:', total_len,
               'falsepos:', falsepos, falsepos / len(testDataSet[0]),
               'trueneg:', trueneg, trueneg / len(testDataSet[1]))
+
+        pyplot.figure()
+        pyplot.scatter(false_list[:, 0], false_list[:, 1], marker='x', s=5)
+        pyplot.scatter(true_list[:, 0], true_list[:, 1], marker='o', s=5)
+        pyplot.show()
+        pyplot.figure()
+        pyplot.scatter(false_score_0_list, false_score_1_list, marker='x', s=5)
+        pyplot.scatter(true_score_0_list, true_score_1_list, marker='o', s=5)
+        pyplot.plot([false_score_0_list.min(), false_score_0_list.max()],
+                    [false_score_0_list.min(), false_score_0_list.max()])
+        pyplot.plot([false_score_1_list.min(), false_score_1_list.max()],
+                    [false_score_1_list.min(), false_score_1_list.max()])
+        # for x,y,s in zip(false_score_0_list, false_score_1_list, np.array(testDataSet[0])[:, 1]):
+        #     pyplot.text(x,y,s)
+        pyplot.title('{} {}'.format(falsepos, trueneg))
+        pyplot.show()
 
 
 if __name__ == '__main__':

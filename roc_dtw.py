@@ -106,7 +106,7 @@ def cal_distance_multiprocessing_step(args):
 
 def cal_distance_multiprocessing(label_feature_list):
     args_list = []
-    for a in range(len(label_feature_list)):
+    for a in range(74):
         for b in range(a, len(label_feature_list)):
             a_label, a_feature = label_feature_list[a]
             b_label, b_feature = label_feature_list[b]
