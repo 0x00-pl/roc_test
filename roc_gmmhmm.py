@@ -25,11 +25,12 @@ def load_file(filename, file_format, frame_rate=16000):
 
     vader = webrtcvad.Vad()
     vader.set_mode(1)
-    frames = python_speech_features.sigproc.framesig(signal, 160, 160)
+    frames = python_speech_features.sigproc.framesig(signal, 320, 320)
     frames = np.array([i for i in frames if vader.is_speech(i.astype('int16').tobytes(), 16000)])
     signal = frames.flatten()
 
-    ret = python_speech_features.mfcc(signal, numcep=13, nfilt=26, winlen=0.025, winstep=0.01, lowfreq=100,
+    ret = python_speech_features.mfcc(signal, numcep=10, winlen=0.025, winstep=0.01, lowfreq=100,
+                                      appendEnergy=True,
                                       winfunc=lambda x: np.hamming(x))
 
     # ret = ret - np.mean(ret.flatten())
@@ -73,7 +74,7 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
     for label in dataset.keys():
         if GMMHMM_Models.get(label) == None:
             model = hmm.GaussianHMM(
-                n_components=16, n_iter=1000, covariance_type='diag',
+                n_components=8, n_iter=1000, covariance_type='diag',
                 params='tmc', init_params='mc',
                 verbose=True
             )
@@ -95,13 +96,22 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
     return GMMHMM_Models
 
 
+def my_score(model, feature):
+    return model.score(feature) / len(feature)
+    framelogprob = model._compute_log_likelihood(feature)
+    logprob, fwdlattice = model._do_forward_pass(framelogprob)
+    for idx in range(len(fwdlattice)):
+        fwdlattice[idx] = fwdlattice[idx] / idx
+    return fwdlattice[-1][-1]
+
+
 def main():
     trainDataSet = {
-        0: read_all('kanzhitongxue_train/u8k'),
+        0: read_all('kanzhitongxue_train/other_text'),
         1: read_all('kanzhitongxue_train/pos')
     }
     testDataSet = {
-        0: read_all('kanzhitongxue_test/u8k'),
+        0: read_all('kanzhitongxue_test/other_text'),
         1: read_all('kanzhitongxue_test/pos')
     }
 
@@ -114,27 +124,29 @@ def main():
         false_score_0_list, false_score_1_list = [], []
 
         for feature in testDataSet[0]:
-            score_0 = models[0].score(feature[0]) / len(feature[0])
-            score_1 = models[1].score(feature[0]) / len(feature[0])
-            if score_0 < -10000 or score_1 < -10000:
-                print('bad false', feature[1], score_0, score_1)
-                continue
+            score_0 = my_score(models[0], feature[0])
+            score_1 = my_score(models[1], feature[0])
+            # if score_0 < -10000 or score_1 < -10000:
+            #     print('bad false', feature[1], score_0, score_1)
+            #     continue
 
             false_score_0_list.append(score_0)
             false_score_1_list.append(score_1)
             if score_1 > score_0:
+                print('falsepos:', feature[1])
                 falsepos = falsepos + 1
 
         for feature in testDataSet[1]:
-            score_0 = models[0].score(feature[0]) / len(feature[0])
-            score_1 = models[1].score(feature[0]) / len(feature[0])
-            if score_0 < -10000 or score_1 < -10000:
-                print('bad true', feature[1], score_0, score_1)
-                continue
+            score_0 = my_score(models[0], feature[0])
+            score_1 = my_score(models[1], feature[0])
+            # if score_0 < -10000 or score_1 < -10000:
+            #     print('bad true', feature[1], score_0, score_1)
+            #     continue
 
             true_score_0_list.append(score_0)
             true_score_1_list.append(score_1)
             if score_0 > score_1:
+                print('trueneg:', feature[1])
                 trueneg = trueneg + 1
 
         false_score_0_list, false_score_1_list = np.array(false_score_0_list), np.array(false_score_1_list)
@@ -163,8 +175,20 @@ def main():
                     [false_score_0_list.min(), false_score_0_list.max()])
         pyplot.plot([false_score_1_list.min(), false_score_1_list.max()],
                     [false_score_1_list.min(), false_score_1_list.max()])
+
         # for x,y,s in zip(false_score_0_list, false_score_1_list, np.array(testDataSet[0])[:, 1]):
         #     pyplot.text(x,y,s)
+
+        score_feature_label_min = min(zip(false_score_0_list, false_score_1_list, testDataSet[0]), key=lambda x: x[0])
+        pyplot.text(score_feature_label_min[0], score_feature_label_min[1], score_feature_label_min[2][1])
+        score_feature_label_max = max(zip(false_score_0_list, false_score_1_list, testDataSet[0]), key=lambda x: x[0])
+        pyplot.text(score_feature_label_max[0], score_feature_label_max[1], score_feature_label_max[2][1])
+
+        score_feature_label_min = min(zip(true_score_0_list, true_score_1_list, testDataSet[1]), key=lambda x: x[1])
+        pyplot.text(score_feature_label_min[0], score_feature_label_min[1], score_feature_label_min[2][1])
+        score_feature_label_max = max(zip(true_score_0_list, true_score_1_list, testDataSet[1]), key=lambda x: x[1])
+        pyplot.text(score_feature_label_max[0], score_feature_label_max[1], score_feature_label_max[2][1])
+
         pyplot.title('{} {}'.format(falsepos, trueneg))
         pyplot.show()
 
