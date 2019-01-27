@@ -38,7 +38,7 @@ def load_file(filename, file_format, frame_rate=16000):
     # ret = ret - np.mean(ret, axis=0)
     # ret = ret / np.var(ret, axis=0)
 
-    ret_delta = python_speech_features.delta(ret, 1)
+    ret_delta = python_speech_features.delta(ret[:, 1:], 1)
     ret_delta2 = python_speech_features.delta(ret_delta, 1)
 
     # ret = ret - np.mean(ret, axis=1)[:, np.newaxis]
@@ -97,12 +97,12 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
 
 
 def my_score(model, feature):
-    return model.score(feature) / len(feature)
-    framelogprob = model._compute_log_likelihood(feature)
-    logprob, fwdlattice = model._do_forward_pass(framelogprob)
-    for idx in range(len(fwdlattice)):
-        fwdlattice[idx] = fwdlattice[idx] / idx
-    return fwdlattice[-1][-1]
+    return model.score(feature) / (len(feature)+1)
+    # framelogprob = model._compute_log_likelihood(feature)
+    # logprob, fwdlattice = model._do_forward_pass(framelogprob)
+    # for idx in range(len(fwdlattice)):
+    #     fwdlattice[idx] = fwdlattice[idx] / idx
+    # return fwdlattice[-1][-1]
 
 
 def main():
