@@ -29,7 +29,7 @@ def load_file(filename, file_format, frame_rate=16000):
     frames = np.array([i for i in frames if vader.is_speech(i.astype('int16').tobytes(), 16000)])
     signal = frames.flatten()
 
-    ret = python_speech_features.mfcc(signal, numcep=10, winlen=0.025, winstep=0.01, lowfreq=100,
+    ret = python_speech_features.mfcc(signal, numcep=13, winlen=0.02, winstep=0.01, lowfreq=100,
                                       appendEnergy=True,
                                       winfunc=lambda x: np.hamming(x))
 
@@ -37,6 +37,8 @@ def load_file(filename, file_format, frame_rate=16000):
     # ret = ret / np.var(ret.flatten())
     # ret = ret - np.mean(ret, axis=0)
     # ret = ret / np.var(ret, axis=0)
+    # ret = ret - np.mean(ret, axis=1)[:, np.newaxis]
+    # ret = ret / np.var(ret, axis=1)[:, np.newaxis]
 
     ret_delta = python_speech_features.delta(ret[:, 1:], 1)
     ret_delta2 = python_speech_features.delta(ret_delta, 1)
@@ -74,13 +76,13 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
     for label in dataset.keys():
         if GMMHMM_Models.get(label) == None:
             model = hmm.GaussianHMM(
-                n_components=8, n_iter=1000, covariance_type='diag',
-                params='tmc', init_params='mc',
+                n_components=12, n_iter=1000, covariance_type='diag',
+                params='mc', init_params='mc',
                 verbose=True
             )
             model.startprob_ = [1] + [0] * (model.n_components - 1)
             model.transmat_ = [
-                [0.0] * i + [0.5, 0.5] + [0] * (model.n_components - i - 2)
+                [0.0] * i + [0.7, 0.3] + [0] * (model.n_components - i - 2)
                 for i in range(model.n_components - 1)
             ] + [[0]*(model.n_components - 1) + [1]]
         else:
