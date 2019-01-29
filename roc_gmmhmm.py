@@ -1,15 +1,11 @@
-import math
+
 import os
-
-import itertools
-
 import numpy as np
 import sklearn
 import webrtcvad
 from hmmlearn import hmm
 import pydub
 from matplotlib import pyplot
-from matplotlib.pyplot import figure, scatter, show
 from pydub import effects
 import python_speech_features
 
@@ -29,19 +25,21 @@ def load_file(filename, file_format, frame_rate=16000):
     frames = np.array([i for i in frames if vader.is_speech(i.astype('int16').tobytes(), 16000)])
     signal = frames.flatten()
 
-    ret = python_speech_features.mfcc(signal, numcep=13, winlen=0.02, winstep=0.01, lowfreq=100,
+    ret = python_speech_features.mfcc(signal, numcep=13, nfilt=40, winlen=0.02, winstep=0.01, lowfreq=100,
                                       appendEnergy=True,
                                       winfunc=lambda x: np.hamming(x))
 
     # ret = ret - np.mean(ret.flatten())
     # ret = ret / np.var(ret.flatten())
-    # ret = ret - np.mean(ret, axis=0)
+    ret = ret - np.mean(ret, axis=0)
     # ret = ret / np.var(ret, axis=0)
     # ret = ret - np.mean(ret, axis=1)[:, np.newaxis]
     # ret = ret / np.var(ret, axis=1)[:, np.newaxis]
 
     ret_delta = python_speech_features.delta(ret[:, 1:], 1)
+    ret_delta = ret_delta - np.mean(ret_delta, axis=0)
     ret_delta2 = python_speech_features.delta(ret_delta, 1)
+    ret_delta2 = ret_delta2 - np.mean(ret_delta2, axis=0)
 
     # ret = ret - np.mean(ret, axis=1)[:, np.newaxis]
     # ret = ret / np.var(ret, axis=1)[:, np.newaxis]
@@ -76,13 +74,13 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
     for label in dataset.keys():
         if GMMHMM_Models.get(label) == None:
             model = hmm.GaussianHMM(
-                n_components=12, n_iter=1000, covariance_type='diag',
-                params='mc', init_params='mc',
+                n_components=16, n_iter=1000, covariance_type='diag',
+                params='tmc', init_params='mc',
                 verbose=True
             )
             model.startprob_ = [1] + [0] * (model.n_components - 1)
             model.transmat_ = [
-                [0.0] * i + [0.7, 0.3] + [0] * (model.n_components - i - 2)
+                [0.0] * i + [0.9, 0.1] + [0] * (model.n_components - i - 2)
                 for i in range(model.n_components - 1)
             ] + [[0]*(model.n_components - 1) + [1]]
         else:
@@ -99,12 +97,12 @@ def train_GMMHMM(dataset, GMMHMM_Models=None):
 
 
 def my_score(model, feature):
-    return model.score(feature) / (len(feature)+1)
-    # framelogprob = model._compute_log_likelihood(feature)
-    # logprob, fwdlattice = model._do_forward_pass(framelogprob)
-    # for idx in range(len(fwdlattice)):
-    #     fwdlattice[idx] = fwdlattice[idx] / idx
-    # return fwdlattice[-1][-1]
+    # return model.score(feature) / (len(feature)+1)
+    framelogprob = model._compute_log_likelihood(feature)
+    logprob, fwdlattice = model._do_forward_pass(framelogprob)
+    for idx in range(len(fwdlattice)):
+        fwdlattice[idx] = fwdlattice[idx] / (idx+1)
+    return fwdlattice[-1][-1]
 
 
 def main():
