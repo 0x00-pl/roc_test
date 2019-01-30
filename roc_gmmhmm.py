@@ -25,7 +25,7 @@ def load_file(filename, file_format, frame_rate=16000):
     frames = np.array([i for i in frames if vader.is_speech(i.astype('int16').tobytes(), 16000)])
     signal = frames.flatten()
 
-    ret = python_speech_features.mfcc(signal, numcep=13, nfilt=40, winlen=0.02, winstep=0.01, lowfreq=100,
+    ret = python_speech_features.mfcc(signal, numcep=13, nfilt=40, winlen=0.025, winstep=0.01, lowfreq=100,
                                       appendEnergy=True,
                                       winfunc=lambda x: np.hamming(x))
 
